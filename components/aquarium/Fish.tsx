@@ -6,7 +6,7 @@ import Image from 'next/image';
 type FishProps = {
   type: string;
   imageUrl?: string;
-  size: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  size: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
   yPosition: number;
   isNightMode: boolean;
   position: { x: number; y: number };
@@ -21,11 +21,12 @@ const Fish = ({ type, imageUrl, size, isNightMode, position, direction, temperat
 
   // Size mapping for image-based fish
   const imageSizeClasses = {
-    xs: 'w-16 h-16',
-    sm: 'w-24 h-24',
-    md: 'w-32 h-32',
-    lg: 'w-40 h-40',
-    xl: 'w-48 h-48',
+    xs: 'w-12 h-12 sm:w-16 sm:h-16',
+    sm: 'w-16 h-16 sm:w-24 sm:h-24',
+    md: 'w-24 h-24 sm:w-32 sm:h-32',
+    lg: 'w-32 h-32 sm:w-40 sm:h-40',
+    xl: 'w-40 h-40 sm:w-48 sm:h-48',
+    xxl: 'w-56 h-56 sm:w-72 sm:h-72',
   };
 
   // Faded if cold, extra bright if hot

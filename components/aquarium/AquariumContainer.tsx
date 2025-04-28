@@ -34,6 +34,13 @@ const AquariumContainer = () => {
 
   // Track which fishes are currently added
   const [addedFishIds, setAddedFishIds] = useState<number[]>([]);
+  // Track if Alex has been added
+  const [alexAdded, setAlexAdded] = useState(false);
+  // Track Alex's angle (direction in radians)
+  const [alexAngle, setAlexAngle] = useState(Math.random() * 2 * Math.PI);
+
+  // Alex fish data
+  const alexFish = { id: 99, type: 'custom-image', imageUrl: '/Alex.png', size: 'xxl', speed: 1, yPosition: 50 };
 
   // Go Crazy mode
   const [goCrazy, setGoCrazy] = useState(false);
@@ -53,6 +60,11 @@ const AquariumContainer = () => {
     }, {} as Record<number, 'left' | 'right'>)
   );
 
+  // Add Alex to fishData and state when needed
+  const allFishData = useMemo(() => {
+    return alexAdded ? [...fishData, alexFish] : fishData;
+  }, [fishData, alexAdded]);
+
   const aquariumAudioRef = useRef<HTMLAudioElement>(null);
   const rickrollAudioRef = useRef<HTMLAudioElement>(null);
 
@@ -64,29 +76,33 @@ const AquariumContainer = () => {
         let newPositions = { ...prevPositions };
         setFishDirections(prevDirections => {
           let newDirections = { ...prevDirections };
-          fishData.forEach(fish => {
-            const prev = prevPositions[fish.id];
-            const direction = prevDirections[fish.id];
+          allFishData.forEach(fish => {
+            const prev = prevPositions[fish.id] || { x: 50, y: 50 };
+            const direction = prevDirections[fish.id] || 'right';
 
             // --- TEMPERATURE EFFECTS & GO CRAZY ---
             let tempSpeed = fish.speed;
-            if (temperature <= 20) tempSpeed *= 0.5;
-            else if (temperature >= 28) tempSpeed *= 1.5;
-            if (goCrazy) tempSpeed = 15;
+            if (fish.id !== 99) { // normal fish
+              if (temperature <= 20) tempSpeed *= 0.5;
+              else if (temperature >= 28) tempSpeed *= 1.5;
+              if (goCrazy) tempSpeed = 15;
+            } else { // Alex
+              tempSpeed *= 2; // even faster
+            }
 
             const swimSpeed = tempSpeed * (0.02 + Math.random() * 0.01);
 
             // Cluster (cold): move toward center X
             let clusterOffset = 0;
-            if (temperature <= 20) {
+            if (fish.id !== 99 && temperature <= 20) {
               clusterOffset = (50 - prev.x) * 0.02; // drift toward center
             }
             // Swim to top (hot): move Y upward
             let heatLift = 0;
-            if (temperature >= 28) {
+            if (fish.id !== 99 && temperature >= 28) {
               heatLift = -0.2 * (temperature - 27); // stronger lift if hotter
             }
-            if (goCrazy) {
+            if (goCrazy && fish.id !== 99) {
               // Randomly flip direction often
               if (Math.random() < 0.2) {
                 newDirections[fish.id] = direction === 'right' ? 'left' : 'right';
@@ -95,24 +111,49 @@ const AquariumContainer = () => {
               heatLift += (Math.random() - 0.5) * 2;
             }
 
-            let newX = direction === 'right' ? prev.x + swimSpeed : prev.x - swimSpeed;
-            newX += clusterOffset;
-            const verticalMovement = Math.sin(Date.now() / 2000 + fish.id) * 0.3;
-            let newY = prev.y + verticalMovement + heatLift;
-
-            // Clamp based on fish size so fish never leaves aquarium
-            const sizeToHalfWidth = { xs: 2, sm: 3, md: 4, lg: 6, xl: 8 }; // in percent
-            const halfWidth = sizeToHalfWidth[fish.size as keyof typeof sizeToHalfWidth] || 4;
-            const minX = halfWidth;
-            const maxX = 100 - halfWidth;
-            if (newX > maxX) {
-              newDirections[fish.id] = 'left';
-              newX = maxX;
-            } else if (newX < minX) {
-              newDirections[fish.id] = 'right';
-              newX = minX;
+            // Alex: smooth movement
+            let newX, newY;
+            if (fish.id === 99) {
+              // Move along persistent angle
+              let angle = alexAngle;
+              newX = prev.x + Math.cos(angle) * tempSpeed * 0.5;
+              newY = prev.y + Math.sin(angle) * tempSpeed * 0.5;
+              // Clamp to aquarium
+              let bounced = false;
+              if (newX < 8 || newX > 92) {
+                angle = Math.PI - angle + (Math.random() - 0.5) * 0.5; // bounce and randomize a bit
+                newX = Math.max(8, Math.min(92, newX));
+                bounced = true;
+              }
+              if (newY < 8 || newY > 92) {
+                angle = -angle + (Math.random() - 0.5) * 0.5;
+                newY = Math.max(8, Math.min(92, newY));
+                bounced = true;
+              }
+              // Occasionally randomize angle for erratic but smooth movement
+              if (Math.random() < 0.01 || bounced) {
+                angle = angle + (Math.random() - 0.5) * 1.2;
+              }
+              setAlexAngle(angle);
+            } else {
+              newX = direction === 'right' ? prev.x + swimSpeed : prev.x - swimSpeed;
+              newX += clusterOffset;
+              const verticalMovement = Math.sin(Date.now() / 2000 + fish.id) * 0.3;
+              newY = prev.y + verticalMovement + heatLift;
+              // Clamp based on fish size so fish never leaves aquarium
+              const sizeToHalfWidth = { xs: 2, sm: 3, md: 4, lg: 6, xl: 8, xxl: 12 };
+              const halfWidth = sizeToHalfWidth[fish.size as keyof typeof sizeToHalfWidth] || 4;
+              const minX = halfWidth;
+              const maxX = 100 - halfWidth;
+              if (newX > maxX) {
+                newDirections[fish.id] = 'left';
+                newX = maxX;
+              } else if (newX < minX) {
+                newDirections[fish.id] = 'right';
+                newX = minX;
+              }
+              newY = Math.max(10, Math.min(85, newY));
             }
-            newY = Math.max(10, Math.min(85, newY));
             newPositions[fish.id] = { x: newX, y: newY };
           });
           return newDirections;
@@ -123,7 +164,7 @@ const AquariumContainer = () => {
     };
     animFrame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animFrame);
-  }, [fishData, temperature, goCrazy]);
+  }, [allFishData, temperature, goCrazy, alexAngle]);
 
   useEffect(() => {
     if (aquariumAudioRef.current) {
@@ -160,7 +201,7 @@ const AquariumContainer = () => {
 
 
   return (
-    <div className="w-screen h-screen relative rounded-lg overflow-hidden shadow-2xl transition-all duration-300">
+    <div className="w-full h-screen max-h-[100dvh] relative rounded-lg overflow-hidden shadow-2xl transition-all duration-300">
       {/* Ambient aquarium sound */}
       <audio ref={aquariumAudioRef} src="/fish-tank.mp3" autoPlay loop style={{ display: 'none' }} />
       {/* Rick Roll sound */}
@@ -180,67 +221,73 @@ const AquariumContainer = () => {
       {/* Glass effect overlay */}
       <div className="absolute inset-0 bg-white/5 backdrop-blur-[1px]"></div>
 
-      {/* Night/day toggle */}
-      <div className="absolute top-4 right-4 z-10 flex gap-2">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={toggleNightMode}
-          className="bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all"
-        >
-          {isNightMode ? <SunIcon className="h-5 w-5 text-yellow-300" /> : <MoonIcon className="h-5 w-5 text-blue-100" />}
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setIsMuted(m => !m)}
-          className="bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all"
-        >
-          {isMuted ? (
-            <span role="img" aria-label="Unmute">🔇</span>
-          ) : (
-            <span role="img" aria-label="Mute">🔊</span>
-          )}
-        </Button>
-        <Button
-          variant="default"
-          disabled={addedFishIds.length >= fishData.length}
-          onClick={() => {
-            if (addedFishIds.length < fishData.length) {
-              // remove the random function from the array and make it random from the remaining fish
-              const remainingFish = fishData.filter(fish => !addedFishIds.includes(fish.id));
-              const randomFish = remainingFish[Math.floor(Math.random() * remainingFish.length)];
-              setAddedFishIds(ids => [...ids, randomFish.id]);
-            }
-          }}
-        >
-          Add Fish
-        </Button>
-        <Button
-          variant="secondary"
-          disabled={addedFishIds.length === 0}
-          onClick={() => {
-            setAddedFishIds(ids => ids.slice(0, -1));
-          }}
-        >
-          Remove Fish
-        </Button>
-        <Button
-          variant="default"
-          disabled={addedFishIds.length === fishData.length}
-          onClick={() => setAddedFishIds(fishData.map(f => f.id))}
-        >
-          Add All Fish
-        </Button>
+      {/* Night/day toggle and controls */}
+      <div className="absolute top-4 right-4 z-10 flex flex-col sm:flex-row gap-2">
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={toggleNightMode}
+            className="bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all"
+          >
+            {isNightMode ? <SunIcon className="h-5 w-5 text-yellow-300" /> : <MoonIcon className="h-5 w-5 text-blue-100" />}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setIsMuted(m => !m)}
+            className="bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all"
+          >
+            {isMuted ? (
+              <span role="img" aria-label="Unmute">🔇</span>
+            ) : (
+              <span role="img" aria-label="Mute">🔊</span>
+            )}
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="default"
+            size="sm"
+            disabled={addedFishIds.length >= fishData.length}
+            onClick={() => {
+              if (addedFishIds.length < fishData.length) {
+                const remainingFish = fishData.filter(fish => !addedFishIds.includes(fish.id));
+                const randomFish = remainingFish[Math.floor(Math.random() * remainingFish.length)];
+                setAddedFishIds(ids => [...ids, randomFish.id]);
+              }
+            }}
+          >
+            Add Fish
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={addedFishIds.length === 0}
+            onClick={() => {
+              setAddedFishIds(ids => ids.slice(0, -1));
+            }}
+          >
+            Remove Fish
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            disabled={addedFishIds.length === fishData.length}
+            onClick={() => setAddedFishIds(fishData.map(f => f.id))}
+          >
+            Add All
+          </Button>
+        </div>
       </div>
 
       {/* Temperature control */}
-      <div className="absolute top-4 left-4 z-10 flex items-center gap-4">
+      <div className="absolute top-4 left-4 z-10 flex flex-col sm:flex-row items-center gap-4">
         <ThermometerDisplay temperature={temperature} />
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-row sm:flex-col gap-2">
           <Button
             variant="outline"
-            size="lg"
+            size="sm"
             onClick={() => adjustTemperature(1)}
             className="h-8 w-8 p-0 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-xl"
           >
@@ -248,7 +295,7 @@ const AquariumContainer = () => {
           </Button>
           <Button
             variant="outline"
-            size="lg"
+            size="sm"
             onClick={() => adjustTemperature(-1)}
             className="h-8 w-8 p-0 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-xl"
           >
@@ -257,19 +304,45 @@ const AquariumContainer = () => {
         </div>
         <Button
           variant={goCrazy ? "destructive" : "default"}
-          className="ml-4 animate-pulse"
+          size="sm"
+          className="ml-0 sm:ml-4 animate-pulse"
           onClick={() => setGoCrazy(crazy => !crazy)}
         >
           {goCrazy ? "Stop This Madness" : "Go Crazy"}
         </Button>
       </div>
 
+      {/* We Need Help Button */}
+      {addedFishIds.length === fishData.length && !alexAdded && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex justify-center">
+          <Button
+            variant="destructive"
+            size="lg"
+            className="animate-bounce shadow-xl"
+            onClick={() => {
+              setAlexAdded(true);
+              setFishPositions(prev => ({
+                ...prev,
+                99: { x: Math.random() * 80 + 10, y: 50 },
+              }));
+              setFishDirections(prev => ({
+                ...prev,
+                99: Math.random() > 0.5 ? 'right' : 'left',
+              }));
+              setAlexAngle(Math.random() * 2 * Math.PI);
+            }}
+          >
+            We Need Help
+          </Button>
+        </div>
+      )}
+
       {/* Fish components */}
-      {fishData.filter(fish => addedFishIds.includes(fish.id)).map((fish) => (
+      {allFishData.filter(fish => addedFishIds.includes(fish.id) || fish.id === 99 && alexAdded).map((fish) => (
         <Fish
           key={fish.id}
           {...fish}
-          size={fish.size as "xl" | "lg" | "md" | "sm" | "xs"}
+          size={fish.size as "xl" | "lg" | "md" | "sm" | "xs" | "xxl"}
           isNightMode={isNightMode}
           position={fishPositions[fish.id]}
           direction={fishDirections[fish.id]}
