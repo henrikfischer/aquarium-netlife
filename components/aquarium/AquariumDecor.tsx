@@ -23,10 +23,10 @@ const AquariumDecor = ({ isNightMode }: AquariumDecorProps) => {
       <Plant type="coral" position={{ left: '85%', bottom: '0' }} height="h-56" isNightMode={isNightMode} />
       <Plant type="seaweed" position={{ left: '45%', bottom: '0' }} height="h-60" isNightMode={isNightMode} />
 
-      <Rock position={{ left: '50%', bottom: '0' }} size="lg" isNightMode={isNightMode} />
-      <Rock position={{ left: '60%', bottom: '5px' }} size="md" isNightMode={isNightMode} />
-      <Rock position={{ left: '85%', bottom: '0' }} size="sm" isNightMode={isNightMode} />
-      <Rock position={{ left: '25%', bottom: '0' }} size="md" isNightMode={isNightMode} />
+      <Rock position={{ left: '50%', bottom: '0' }} size="lg" />
+      <Rock position={{ left: '60%', bottom: '5px' }} size="md" />
+      <Rock position={{ left: '85%', bottom: '0' }} size="sm" />
+      <Rock position={{ left: '25%', bottom: '0' }} size="md" />
 
       {/* Castle decoration with enhanced effects */}
       <div

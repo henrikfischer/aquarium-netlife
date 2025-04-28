@@ -269,6 +269,7 @@ const AquariumContainer = () => {
         <Fish
           key={fish.id}
           {...fish}
+          size={fish.size as "xl" | "lg" | "md" | "sm" | "xs"}
           isNightMode={isNightMode}
           position={fishPositions[fish.id]}
           direction={fishDirections[fish.id]}
