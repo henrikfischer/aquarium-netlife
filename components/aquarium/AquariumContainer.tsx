@@ -40,7 +40,7 @@ const AquariumContainer = () => {
   const [alexAngle, setAlexAngle] = useState(Math.random() * 2 * Math.PI);
 
   // Alex fish data
-  const alexFish = { id: 99, type: 'custom-image', imageUrl: '/Alex.png', size: 'xxl', speed: 1, yPosition: 50 };
+  const alexFish = { id: 99, type: 'custom-image', imageUrl: '/Alex.png', size: 'xxl', speed: .75, yPosition: 50 };
 
   // Go Crazy mode
   const [goCrazy, setGoCrazy] = useState(false);
