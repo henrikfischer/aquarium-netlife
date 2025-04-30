@@ -29,7 +29,7 @@ const AquariumContainer = () => {
     { id: 9, type: 'custom-image', imageUrl: '/Matulan.png', size: 'lg', speed: 1, yPosition: 120 },
     { id: 10, type: 'custom-image', imageUrl: '/Anna.png', size: 'lg', speed: 1, yPosition: 10 },
     { id: 11, type: 'custom-image', imageUrl: '/Martin.png', size: 'lg', speed: 1, yPosition: 120 },
-    { id: 12, type: 'custom-image', imageUrl: '/Espen.png', size: 'xl', speed: 1, yPosition: 120 },
+    { id: 12, type: 'custom-image', imageUrl: '/Espen2.png', size: 'xl', speed: 1, yPosition: 120 },
   ], []);
 
   // Track which fishes are currently added
